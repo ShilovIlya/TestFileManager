@@ -21,7 +21,7 @@ public class AppStart {
             logger.debug("Application start.");
         }
 
-
-        JFileManager jFileManager = new JFileManager();
+        FileManager fileManager = new FileManager();
+        JFileManager jFileManager = new JFileManager(fileManager);
     }
 }

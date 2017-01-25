@@ -1,7 +1,10 @@
 package ru.alee.software.test.view;
 
+import ru.alee.software.test.model.FileManager;
+import java.io.File;
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 public class JFileManager{
     private JPanel rootPanel;
@@ -14,7 +17,10 @@ public class JFileManager{
     private JLabel currentDirectoryLabel;
     private JLabel newPathLabel;
 
-    public JFileManager() {
+    private FileManager fileManager;
+    public JFileManager(FileManager fileManager) {
+        this.fileManager = fileManager;
+
         JFrame frame = new JFrame();
         frame.setContentPane(rootPanel);
 
@@ -24,8 +30,11 @@ public class JFileManager{
         frame.setVisible(true);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     }
-    public static void createGUI(){
-        new JFileManager();
+
+    public void filesFoldersListFill(){
+        for (File file : fileManager.getFilesFoldersList()) {
+            filesFoldersList
+        }
     }
 
 }
