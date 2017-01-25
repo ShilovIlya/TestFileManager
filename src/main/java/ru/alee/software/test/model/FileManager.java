@@ -4,6 +4,9 @@ import org.apache.log4j.Logger;
 import ru.alee.software.test.exceptions.DirectoryNotExistException;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,9 +22,9 @@ public class FileManager {
 
     private static final Logger logger = Logger.getLogger(FileManager.class);
 
-    private static final String defaultDirectoryPath = "C://";
     private File currentDirectory;
     private List<File> filesFoldersList;
+    private List<File> filesBuffer;
 
     /**
      * Class constructor setting curentDirectory to current path
@@ -140,4 +143,37 @@ public class FileManager {
         });
     }
 
+    /**
+     * Create new directory if not exist inf current folder
+     *
+     * @param name - folder name
+     */
+    public void makeDirectory(String name) {
+        File newDir = new File(name);
+        if (!newDir.mkdir()) {
+            logger.debug("directory wasn't created.");
+        }
+    }
+
+    /**
+     * Save in memory files and directories which were selected.
+     *
+     * @param selectedIndices
+     */
+    public void saveInMemoryFiles(int[] selectedIndices) {
+        filesBuffer = new ArrayList<>(selectedIndices.length);
+        for (int i : selectedIndices) {
+            filesBuffer.add(filesFoldersList.get(i));
+        }
+    }
+
+    public void pasteFromMemoryFiles() throws IOException {
+        for (File file: filesBuffer) {
+            File newFile = new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName()));
+            if (newFile.createNewFile()) {
+                logger.debug("Rewriting file.");
+            }
+            Files.copy(file.toPath(), newFile.toPath());
+        }
+    }
 }

@@ -11,16 +11,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
+/**
+ * Class for starting work. It creates file manager and form.
+ *
+ * @author Ilya
+ */
 public class AppStart {
 
     private final static Logger logger = Logger.getLogger(AppStart.class);
 
     public static void main(String[] args) {
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Application start.");
-        }
-
+        logger.debug("Application start!");
         FileManager fileManager = new FileManager();
         JFileManager jFileManager = new JFileManager(fileManager);
     }
