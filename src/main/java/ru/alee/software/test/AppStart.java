@@ -3,7 +3,9 @@ package ru.alee.software.test;
 import org.apache.log4j.Logger;
 import ru.alee.software.test.exceptions.DirectoryNotExistException;
 import ru.alee.software.test.model.FileManager;
+import ru.alee.software.test.view.JFileManager;
 
+import javax.swing.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,5 +20,8 @@ public class AppStart {
         if (logger.isDebugEnabled()) {
             logger.debug("Application start.");
         }
+
+
+        JFileManager jFileManager = new JFileManager();
     }
 }
