@@ -8,13 +8,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Manager form.
@@ -46,6 +41,7 @@ public class JFileManager{
     private JButton deleteButton;
 
     private JList filesFoldersList;
+    private JButton pasteButton;
     private DefaultListModel listModel;
 
     private FileManager fileManager;
@@ -113,20 +109,61 @@ public class JFileManager{
         copyButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                if (copyButton.getText().equals("copy")) {
-                    if (filesFoldersList.getSelectedIndices().length > 0) {
-                        copyButton.setText("paste");
-                        fileManager.saveInMemoryFiles(filesFoldersList.getSelectedIndices());
-                    }
-                } else if (copyButton.getText().equals("paste")) {
-                    try {
-                        fileManager.pasteFromMemoryFiles();
-                    } catch (IOException e) {
-                        logger.error("Files copy error:" + e);
-                        newPathField.setText("Sorry, it's some copy error. Check that you're correct and try again.");
-                    }
-                    copyButton.setText("copy");
+                if (filesFoldersList.getSelectedIndices().length > 0) {
+                    fileManager.bufferedFiles(filesFoldersList.getSelectedIndices(), "copy");
+                    pasteButton.setEnabled(true);
                 }
+            }
+        });
+
+        cutButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (filesFoldersList.getSelectedIndices().length > 0) {
+                    fileManager.bufferedFiles(filesFoldersList.getSelectedIndices(), "cut");
+                    pasteButton.setEnabled(true);
+                }
+            }
+        });
+
+        pasteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+               /* Thread th = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        MyDialog myDialog = new MyDialog(frame);
+                        synchronized (myDialog) {
+                            try {
+                                myDialog.setVisible(true);
+                                myDialog.wait();
+                            } catch (InterruptedException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                });
+
+                th.start();
+*/
+                pasteButton.setEnabled(false);
+                try {
+                    fileManager.copyFromBuffer();
+                } catch (IOException e) {
+                    logger.error("Files copy error:" + e);
+                    newPathField.setText("Sorry, it's some copy error. Check that you're correct and try again.");
+                }
+            }
+        });
+
+        deleteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                if (filesFoldersList.getSelectedIndices().length > 0) {
+                    fileManager.bufferedFiles(filesFoldersList.getSelectedIndices(), "delete");
+                }
+                fileManager.deleteFiles();
             }
         });
 
@@ -138,6 +175,7 @@ public class JFileManager{
 
 
     public void filesFoldersListFill(){
+        fileManager.updateFilesFolderList();
         listModel.removeAllElements();
         for (File file : fileManager.getFilesFoldersList()) {
             listModel.addElement(file.getName());
@@ -154,4 +192,34 @@ public class JFileManager{
         filesFoldersList = new JList(listModel);
     }
 
+    class MyDialog extends JDialog implements ActionListener {
+
+        JButton ok;
+
+        public MyDialog(Frame owner) {
+            super(owner);
+            try {
+                setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+
+                Dimension dialogSize = new Dimension(100, 100);
+                setSize(dialogSize);
+
+                JPanel panel = (JPanel)getContentPane();
+                panel.setLayout(new FlowLayout(FlowLayout.CENTER));
+                ok = new JButton("OK");
+                ok.addActionListener(this);
+                panel.add(ok);
+
+                pack();
+            } catch (Exception exception) {
+                logger.debug("Exception in myDialog constructor: " + exception);
+            }
+        }
+
+        public synchronized void actionPerformed(ActionEvent actionEvent) {
+            logger.debug("myDialog actionPerformed");
+            notify();
+            dispose();
+        }
+    }
 }

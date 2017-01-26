@@ -6,7 +6,6 @@ import ru.alee.software.test.exceptions.DirectoryNotExistException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +24,7 @@ public class FileManager {
     private File currentDirectory;
     private List<File> filesFoldersList;
     private List<File> filesBuffer;
+    private String filesBufferSource;
 
     /**
      * Class constructor setting curentDirectory to current path
@@ -159,21 +159,86 @@ public class FileManager {
      * Save in memory files and directories which were selected.
      *
      * @param selectedIndices
+     * @param filesBufferSource
      */
-    public void saveInMemoryFiles(int[] selectedIndices) {
+    public void bufferedFiles(int[] selectedIndices, String filesBufferSource) {
         filesBuffer = new ArrayList<>(selectedIndices.length);
+        this.filesBufferSource = filesBufferSource;
         for (int i : selectedIndices) {
             filesBuffer.add(filesFoldersList.get(i));
         }
     }
 
-    public void pasteFromMemoryFiles() throws IOException {
+    /**
+     * Try to copy files from buffer to current directory.
+     *
+     * @throws IOException
+     */
+    public void copyFromBuffer() throws IOException {
         for (File file: filesBuffer) {
-            File newFile = new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName()));
-            if (newFile.createNewFile()) {
-                logger.debug("Rewriting file.");
+            copyFile(file, new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName())));
+            if (filesBufferSource.equals("cut")) {
+                deleteFile(file);
             }
-            Files.copy(file.toPath(), newFile.toPath());
+        }
+    }
+
+    /**
+     * Copy file source to file dist. If dist is exist try to rewrite it.
+     * If file is directory call copyDirectory function.
+     *
+     * @param source - path to source file
+     * @param dist - path to destination file
+     * @throws IOException
+     */
+    public void copyFile(File source, File dist) throws IOException{
+        if (source.isFile()) {
+            if (dist.exists()){
+                dist.delete();
+            }
+            Files.copy(source.toPath(), dist.toPath());
+        } else {
+            copyDirectory(source, dist);
+        }
+    }
+
+    /**
+     * Copy directory dirSource to dirDist.
+     * If dirDist is not exist, create it.
+     * Try to copy all files from dirSource.
+     *
+     * @param dirSource - path to source directory
+     * @param dirDist - path to destination directory
+     * @throws IOException
+     */
+    public void copyDirectory(File dirSource, File dirDist) throws IOException{
+        try {
+            if (!dirDist.exists())
+                dirDist.mkdir();
+            for (String fileName : dirSource.list()) {
+                copyFile(new File(dirSource.getAbsolutePath().concat("\\").concat(fileName)),
+                        new File(dirDist.getAbsolutePath().concat("\\").concat(fileName)));
+            }
+        }
+        catch (IOException e) {
+            logger.error("Copy error: " + e);
+        }
+    }
+
+    /**
+     * Check that files in buffer intended for deleting and delete them.
+    */
+    public void deleteFiles(){
+        if (filesBufferSource.equals("delete")) {
+            for (File file : filesBuffer) {
+                deleteFile(file);
+            }
+        }
+    }
+
+    public void deleteFile(File file) {
+        if (!file.delete()) {
+            logger.error("Can't delete file.");
         }
     }
 }
