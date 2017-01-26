@@ -3,11 +3,13 @@ package ru.alee.software.test.model;
 import org.apache.log4j.Logger;
 import ru.alee.software.test.exceptions.DirectoryNotExistException;
 
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.List;
 
 /**
  * Class for managment files and directories.
@@ -22,7 +24,7 @@ public class FileManager {
     private List<File> filesFoldersList;
     private List<File> filesBuffer;
     private String filesBufferCommand;
-    private Integer progress;
+    private volatile int progress;
 
     /**
      * Class constructor setting curentDirectory to current path
@@ -172,12 +174,14 @@ public class FileManager {
      *
      * @throws IOException
      */
-    public void copyFromBuffer() throws IOException {
+    public void copyFromBuffer() throws IOException, InterruptedException {
         progress = 0;
         for (File file: filesBuffer) {
-            copyFile(file, new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName())));
-            if (filesBufferCommand.equals("cut")) {
-                deleteFile(file);
+            while (!Thread.currentThread().isInterrupted()) {
+                copyFile(file, new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName())));
+                if (filesBufferCommand.equals("cut")) {
+                    deleteFile(file);
+                }
             }
         }
     }
@@ -190,16 +194,18 @@ public class FileManager {
      * @param dist - path to destination file
      * @throws IOException
      */
-    public void copyFile(File source, File dist) throws IOException{
+    public void copyFile(File source, File dist) throws IOException, InterruptedException {
         if (source.isFile()) {
             if (dist.exists()){
                 dist.delete();
             }
             Files.copy(source.toPath(), dist.toPath());
+            Thread.currentThread().sleep(100);
         } else {
             copyDirectory(source, dist);
         }
         progress++;
+        logger.debug("progress in copyFile function = " + progress);
     }
 
     /**
@@ -211,13 +217,14 @@ public class FileManager {
      * @param dirDist - path to destination directory
      * @throws IOException
      */
-    public void copyDirectory(File dirSource, File dirDist) throws IOException{
+    public void copyDirectory(File dirSource, File dirDist) throws IOException, InterruptedException {
         try {
             if (!dirDist.exists())
                 dirDist.mkdir();
             for (String fileName : dirSource.list()) {
                 copyFile(new File(dirSource.getAbsolutePath().concat("\\").concat(fileName)),
-                        new File(dirDist.getAbsolutePath().concat("\\").concat(fileName)));
+                            new File(dirDist.getAbsolutePath().concat("\\").concat(fileName)));
+                Thread.currentThread().sleep(100);
             }
         }
         catch (IOException e) {
@@ -228,10 +235,14 @@ public class FileManager {
     /**
      * Check that files in buffer intended for deleting and delete them.
     */
-    public void deleteFiles(){
+    public void deleteFiles() throws InterruptedException {
+        progress = 0;
         if (filesBufferCommand.equals("delete")) {
             for (File file : filesBuffer) {
-                deleteFile(file);
+                while (!Thread.currentThread().isInterrupted()) {
+                    deleteFile(file);
+                    Thread.currentThread().sleep(100);
+                }
             }
         }
     }
@@ -251,7 +262,7 @@ public class FileManager {
         return filesBufferCommand;
     }
 
-    public Integer getProgress() {
+    public int getProgress() {
         return progress;
     }
 
@@ -268,5 +279,24 @@ public class FileManager {
             }
         }
         return size;
+    }
+
+    /**
+     * Search files by name or part of name
+     *
+     * @param fileName - searching file name
+     * @param currentPath - path to parent directory for searching
+     * @return list of File object that match file name
+     */
+    public List<File> search(String fileName, String currentPath) {
+        List<File> result = new ArrayList<>();
+        File currentDir = new File(currentPath);
+        for (File file : currentDir.listFiles()) {
+            if (file.isDirectory()) {
+                result.addAll(search(fileName, file.getAbsolutePath()));
+            } else if (file.getName().contains(fileName))
+                result.add(file);
+        }
+        return result;
     }
 }
