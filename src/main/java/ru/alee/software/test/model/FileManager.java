@@ -7,10 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /**
  * Class for managment files and directories.
@@ -24,7 +21,8 @@ public class FileManager {
     private File currentDirectory;
     private List<File> filesFoldersList;
     private List<File> filesBuffer;
-    private String filesBufferSource;
+    private String filesBufferCommand;
+    private Integer progress;
 
     /**
      * Class constructor setting curentDirectory to current path
@@ -163,7 +161,7 @@ public class FileManager {
      */
     public void bufferedFiles(int[] selectedIndices, String filesBufferSource) {
         filesBuffer = new ArrayList<>(selectedIndices.length);
-        this.filesBufferSource = filesBufferSource;
+        this.filesBufferCommand = filesBufferSource;
         for (int i : selectedIndices) {
             filesBuffer.add(filesFoldersList.get(i));
         }
@@ -175,9 +173,10 @@ public class FileManager {
      * @throws IOException
      */
     public void copyFromBuffer() throws IOException {
+        progress = 0;
         for (File file: filesBuffer) {
             copyFile(file, new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName())));
-            if (filesBufferSource.equals("cut")) {
+            if (filesBufferCommand.equals("cut")) {
                 deleteFile(file);
             }
         }
@@ -200,6 +199,7 @@ public class FileManager {
         } else {
             copyDirectory(source, dist);
         }
+        progress++;
     }
 
     /**
@@ -229,7 +229,7 @@ public class FileManager {
      * Check that files in buffer intended for deleting and delete them.
     */
     public void deleteFiles(){
-        if (filesBufferSource.equals("delete")) {
+        if (filesBufferCommand.equals("delete")) {
             for (File file : filesBuffer) {
                 deleteFile(file);
             }
@@ -240,5 +240,33 @@ public class FileManager {
         if (!file.delete()) {
             logger.error("Can't delete file.");
         }
+        progress++;
+    }
+
+    public List<File> getFilesBuffer() {
+        return filesBuffer;
+    }
+
+    public String getFilesBufferCommand() {
+        return filesBufferCommand;
+    }
+
+    public Integer getProgress() {
+        return progress;
+    }
+
+    public Integer getBufferSize(List<File> buffer) {
+        Integer commandModifier = 1;
+        if (filesBufferCommand.equals("cut")) {
+            commandModifier = 2;
+        }
+        Integer size = 0;
+        for (File file : buffer){
+            size += commandModifier;
+            if (file.isDirectory()) {
+                size += getBufferSize(Arrays.asList(file.listFiles()));
+            }
+        }
+        return size;
     }
 }

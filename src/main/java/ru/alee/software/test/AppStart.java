@@ -7,6 +7,7 @@ import ru.alee.software.test.view.JFileManager;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -22,7 +23,17 @@ public class AppStart {
 
     public static void main(String[] args) {
         logger.debug("Application start!");
-        FileManager fileManager = new FileManager();
-        JFileManager jFileManager = new JFileManager(fileManager);
+        try {
+            FileManager fileManager = new FileManager("D:\\log\\testfolder");
+            /*for (int i = 0; i < 100; i++) {
+                File tmpFile = new File("D:\\log\\testfolder\\a".concat(String.valueOf(i)));
+                tmpFile.createNewFile();
+            }*/
+            JFileManager jFileManager = new JFileManager(fileManager);
+        } catch (DirectoryNotExistException e) {
+            logger.debug("cant open D:\\log\\testfolder" + e);
+        }// catch (IOException e) {
+         //   logger.debug("cant create ai file" + e);
+        //}
     }
 }

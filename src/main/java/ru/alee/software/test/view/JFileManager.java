@@ -43,15 +43,20 @@ public class JFileManager{
     private JList filesFoldersList;
     private JButton pasteButton;
     private DefaultListModel listModel;
+    private JScrollPane scroll;
+    private JFrame frame;
 
     private FileManager fileManager;
 
     public JFileManager(FileManager fileManager) {
         this.fileManager = fileManager;
 
-        JFrame frame = new JFrame();
+        frame = new JFrame();
         frame.setContentPane(rootPanel);
         frame.setPreferredSize(new Dimension(1000,600));
+
+        //scroll = new JScrollPane();
+        //frame.getContentPane().add(scroll);
 
         updateCurrentDirectoryPath();
 
@@ -129,31 +134,41 @@ public class JFileManager{
         pasteButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-               /* Thread th = new Thread(new Runnable() {
+                Thread th = new Thread(new Runnable() {
                     @Override
                     public void run() {
 
-                        MyDialog myDialog = new MyDialog(frame);
+                        Integer taskSize = fileManager.getBufferSize(fileManager.getFilesBuffer());
+                        MyDialog myDialog = new MyDialog(frame, taskSize);
                         synchronized (myDialog) {
                             try {
                                 myDialog.setVisible(true);
+                                myDialog.dialogProgressBar.setVisible(true);
+
+                                pasteButton.setEnabled(false);
+                                try {
+                                    fileManager.copyFromBuffer();
+                                } catch (IOException e) {
+                                    logger.error("Files copy error:" + e);
+                                    newPathField.setText("Sorry, it's some copy error. Check that you're correct and try again.");
+                                }
+
+                                while (fileManager.getProgress() < taskSize) {
+                                    myDialog.dialogProgressBar.setValue(fileManager.getProgress());
+                                    Thread.currentThread().sleep(15);
+                                }
                                 myDialog.wait();
                             } catch (InterruptedException ex) {
-                                ex.printStackTrace();
+                                logger.error("paste operation interrupted: " + ex);
+                            } finally {
+                                fileManager.updateFilesFolderList();
+                                filesFoldersListFill();
                             }
                         }
                     }
                 });
-
                 th.start();
-*/
-                pasteButton.setEnabled(false);
-                try {
-                    fileManager.copyFromBuffer();
-                } catch (IOException e) {
-                    logger.error("Files copy error:" + e);
-                    newPathField.setText("Sorry, it's some copy error. Check that you're correct and try again.");
-                }
+
             }
         });
 
@@ -190,14 +205,20 @@ public class JFileManager{
         listModel = new DefaultListModel();
         filesFoldersListFill();
         filesFoldersList = new JList(listModel);
+        /*
+        scroll = new JScrollPane();
+        scroll.setBounds(100,52,130,50);
+        scroll.setViewportView(filesFoldersList);
+        */
     }
 
     class MyDialog extends JDialog implements ActionListener {
 
-        JButton ok;
+        JButton cancelButton;
+        JProgressBar dialogProgressBar;
 
-        public MyDialog(Frame owner) {
-            super(owner);
+        public MyDialog(Frame owner, Integer progressSize) {
+            super(owner,"Progress Dialog");
             try {
                 setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
@@ -206,9 +227,14 @@ public class JFileManager{
 
                 JPanel panel = (JPanel)getContentPane();
                 panel.setLayout(new FlowLayout(FlowLayout.CENTER));
-                ok = new JButton("OK");
-                ok.addActionListener(this);
-                panel.add(ok);
+                cancelButton = new JButton("Cancel");
+                cancelButton.addActionListener(this);
+                panel.add(cancelButton);
+
+                dialogProgressBar = new JProgressBar(0, progressSize);
+                panel.add(dialogProgressBar);
+
+                panel.add(BorderLayout.NORTH, new JLabel("Progress..."));
 
                 pack();
             } catch (Exception exception) {
@@ -217,8 +243,8 @@ public class JFileManager{
         }
 
         public synchronized void actionPerformed(ActionEvent actionEvent) {
-            logger.debug("myDialog actionPerformed");
-            notify();
+            logger.debug("myDialog actionPerformed cancel");
+
             dispose();
         }
     }
