@@ -53,7 +53,7 @@
           <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="7" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <text value="Enter path to change, make directory or name to search file"/>
+          <text value="Enter path to change/make directory or name to search file"/>
         </properties>
       </component>
       <vspacer id="f6629">

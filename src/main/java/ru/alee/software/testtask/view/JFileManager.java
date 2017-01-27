@@ -58,7 +58,6 @@ public class JFileManager{
         frame.setContentPane(rootPanel);
         frame.setPreferredSize(new Dimension(1200,800));
 
-
         updateCurrentDirectoryPath();
 
         moveToParentButton.addActionListener(new ActionListener() {
@@ -105,6 +104,15 @@ public class JFileManager{
                     fileManager.changeDirectory(newPathField.getText());
                     updateCurrentDirectoryPath();
                     filesFoldersListFill();
+
+                    moveToParentButton.setEnabled(true);
+                    copyButton.setEnabled(true);
+                    cutButton.setEnabled(true);
+                    pasteButton.setEnabled(true);
+                    deleteButton.setEnabled(true);
+                    makeDirectoryButton.setEnabled(true);
+                    sortByNameAscButton.setEnabled(true);
+                    sortByNameDescButton.setEnabled(true);
                 } catch (DirectoryNotExistException e) {
                     newPathField.setText("This path not exist. Please, enter new path.");
                     logger.debug(e);
@@ -124,12 +132,21 @@ public class JFileManager{
             @Override
             public void actionPerformed(ActionEvent e) {
                 String fileName = newPathField.getText();
-                List<File> searchResult = fileManager.search(fileName, currentDirectoryPath.getText());
+                List<File> searchResult = fileManager.search(fileName, fileManager.getCurrentDirectory().getAbsolutePath());
                 List<String> strList = new ArrayList<>();
                 for (File file : searchResult){
                     strList.add(file.getAbsolutePath());
                 }
                 fillList(strList);
+                moveToParentButton.setEnabled(false);
+                copyButton.setEnabled(false);
+                cutButton.setEnabled(false);
+                pasteButton.setEnabled(false);
+                deleteButton.setEnabled(false);
+                makeDirectoryButton.setEnabled(false);
+                sortByNameAscButton.setEnabled(false);
+                sortByNameDescButton.setEnabled(false);
+                currentDirectoryPath.setText("");
             }
         });
 
@@ -156,53 +173,42 @@ public class JFileManager{
         pasteButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
+                pasteButton.setEnabled(false);
+                Thread copyThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            fileManager.setPastInterrupted(false);
+                            fileManager.copyFromBuffer();
+                        } catch (IOException e) {
+                            logger.error("Files copy error:" + e);
+                            newPathField.setText("Sorry, it's some copy error. Check that you're correct and try again.");
+                        } catch (InterruptedException e) {
+                            logger.error("Copy interrupted " + e);
+                        }
+                    }
+                });
                 Thread th = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         Integer taskSize = fileManager.getBufferSize(fileManager.getFilesBuffer());
-                        MyDialog myDialog = new MyDialog(frame, taskSize);
-                        logger.debug("taskSize = " + taskSize);
-                        synchronized (myDialog) {
-                            try {
-                                myDialog.setVisible(true);
-                                myDialog.dialogProgressBar.setVisible(true);
+                        MyDialog myDialog = new MyDialog(frame, taskSize, "paste");
+                        myDialog.setVisible(true);
+                        myDialog.dialogProgressBar.setVisible(true);
 
-                                pasteButton.setEnabled(false);
-                                Thread copyThread = new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        try {
-                                            fileManager.copyFromBuffer();
-                                        } catch (IOException e) {
-                                            logger.error("Files copy error:" + e);
-                                            newPathField.setText("Sorry, it's some copy error. Check that you're correct and try again.");
-                                        } catch (InterruptedException e) {
-                                            logger.error("Copy interrupted " + e);
-                                        }
-                                    }
-                                });
-                                myDialog.setProgressThread(copyThread, "paste");
-                                copyThread.start();
-
-                                int progress = fileManager.getProgress();
-                                while ((progress <= taskSize-1) && (!fileManager.isPastInterrupted())) {
-                                    progress = fileManager.getProgress();
-                                    myDialog.dialogProgressBar.setValue(progress);
-                                }
-                                myDialog.progressStatus.setText("End");
-                                copyThread.interrupt();
-                                myDialog.dispose();
-                            } catch (Exception ex) {
-                                logger.error("paste operation interrupted: " + ex);
-                            } finally {
-                                fileManager.updateFilesFolderList();
-                                filesFoldersListFill();
-                            }
+                        int progress = fileManager.getProgress();
+                        while ((progress <= taskSize-1) && (!fileManager.isPastInterrupted())) {
+                            progress = fileManager.getProgress();
+                            myDialog.dialogProgressBar.setValue(progress);
                         }
+                        myDialog.progressStatus.setText("End");
+                        fileManager.updateFilesFolderList();
+                        filesFoldersListFill();
+                        myDialog.dispose();
                     }
                 });
+                copyThread.start();
                 th.start();
-
             }
         });
 
@@ -211,62 +217,54 @@ public class JFileManager{
             public void actionPerformed(ActionEvent actionEvent) {
                 if (filesFoldersList.getSelectedIndices().length > 0) {
                     fileManager.bufferedFiles(filesFoldersList.getSelectedIndices(), "delete");
+
+                    pasteButton.setEnabled(false);
+                    Thread deleteThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                fileManager.setDeleteInterrupted(false);
+                                fileManager.deleteFiles();
+                            } catch (InterruptedException e) {
+                                logger.error("Delete interrupted " + e);
+                            }
+                        }
+                    });
+
                     Thread th = new Thread(new Runnable() {
                         @Override
                         public void run() {
                             Integer taskSize = fileManager.getBufferSize(fileManager.getFilesBuffer());
-                            MyDialog myDialog = new MyDialog(frame, taskSize);
-                            logger.debug("taskSize = " + taskSize);
-                            synchronized (myDialog) {
-                                try {
-                                    myDialog.setVisible(true);
-                                    myDialog.dialogProgressBar.setVisible(true);
+                            MyDialog myDialog = new MyDialog(frame, taskSize,"delete");
+                            pasteButton.setEnabled(false);
+                            myDialog.setVisible(true);
+                            myDialog.dialogProgressBar.setVisible(true);
 
-                                    pasteButton.setEnabled(false);
-                                    Thread deleteThread = new Thread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            try {
-                                                fileManager.deleteFiles();
-                                            } catch (InterruptedException e) {
-                                                logger.error("Copy interrupted " + e);
-                                            }
-                                        }
-                                    });
-                                    myDialog.setProgressThread(deleteThread, "delete");
-                                    deleteThread.start();
-
-                                    int progress = fileManager.getProgress();
-                                    while ((progress <= taskSize - 1) && (!fileManager.isDeleteInterrupted())) {
-                                        progress = fileManager.getProgress();
-                                        myDialog.dialogProgressBar.setValue(progress);
-                                    }
-
-                                    myDialog.progressStatus.setText("End");
-
-                                    myDialog.dispose();
-                                } catch (Exception ex) {
-                                    logger.error("paste operation interrupted: " + ex);
-                                } finally {
-                                    fileManager.updateFilesFolderList();
-                                    filesFoldersListFill();
-                                }
+                            int progress = fileManager.getProgress();
+                            while ((progress <= taskSize - 1) && (!fileManager.isDeleteInterrupted())) {
+                                progress = fileManager.getProgress();
+                                myDialog.dialogProgressBar.setValue(progress);
                             }
+                            myDialog.progressStatus.setText("End");
+                            fileManager.updateFilesFolderList();
+                            filesFoldersListFill();
+                            myDialog.dispose();
                         }
                     });
+                    deleteThread.start();
                     th.start();
 
                 }
             }
         });
-
         frame.pack();
         frame.setVisible(true);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     }
 
-
-
+    /**
+     * Update list from file manager
+     */
     public void filesFoldersListFill(){
         fileManager.updateFilesFolderList();
         List<String> strList = new ArrayList<>();
@@ -276,6 +274,10 @@ public class JFileManager{
         fillList(strList);
     }
 
+    /**
+     * Fill list with files and directories
+     * @param list
+     */
     public void fillList(List<String> list) {
         listModel.removeAllElements();
         for (String str: list) {
@@ -287,6 +289,9 @@ public class JFileManager{
         currentDirectoryPath.setText(fileManager.getCurrentDirectory().getAbsolutePath());
     }
 
+    /**
+     * Set up model for files-directories list
+     */
     private void createUIComponents() {
         listModel = new DefaultListModel();
         filesFoldersListFill();
@@ -294,21 +299,20 @@ public class JFileManager{
 
     }
 
+    /**
+     * Class for progress dialog.
+     * Have progress bar and cancel button.
+     */
     class MyDialog extends JDialog implements ActionListener {
 
         JButton cancelButton;
         JProgressBar dialogProgressBar;
         JLabel progressStatus;
-        Thread progressThread;
         String command;
 
-        public void setProgressThread(Thread progressThread, String command) {
-            this.progressThread = progressThread;
-            this.command = command;
-        }
-
-        public MyDialog(Frame owner, Integer progressSize) {
+        public MyDialog(Frame owner, Integer progressSize, String command) {
             super(owner,"Progress Dialog");
+            this.command = command;
             try {
                 setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
@@ -337,8 +341,7 @@ public class JFileManager{
         public synchronized void actionPerformed(ActionEvent actionEvent) {
             if (command.equals("paste")) {
                 fileManager.setPastInterrupted(true);
-            }
-            if (command.equals("delete")) {
+            }else {
                 fileManager.setDeleteInterrupted(true);
             }
             dispose();

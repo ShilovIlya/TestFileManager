@@ -220,12 +220,12 @@ public class FileManager {
                 dist.delete();
             }
             Files.copy(source.toPath(), dist.toPath());
+            //Sleep to slowdown fast copy for giving time to user for interrupt process
             Thread.currentThread().sleep(100);
         } else {
             copyDirectory(source, dist);
         }
         progress++;
-        logger.debug("progress in copyFile function = " + progress);
     }
 
     /**
@@ -244,6 +244,7 @@ public class FileManager {
             for (String fileName : dirSource.list()) {
                 copyFile(new File(dirSource.getAbsolutePath().concat("\\").concat(fileName)),
                             new File(dirDist.getAbsolutePath().concat("\\").concat(fileName)));
+                //Sleep to slowdown fast delete for giving time to user for interrupt process
                 Thread.currentThread().sleep(100);
             }
         }
@@ -264,6 +265,7 @@ public class FileManager {
                     break;
                 }
                 deleteFile(file);
+                //Sleep to slowdown fast delete for giving time to user for interrupt process
                 Thread.currentThread().sleep(100);
             }
         }
@@ -274,7 +276,6 @@ public class FileManager {
             logger.error("Can't delete file.");
         }
         progress++;
-        logger.debug("progress in delete function = " + progress);
     }
 
     public List<File> getFilesBuffer() {
@@ -289,6 +290,15 @@ public class FileManager {
         return progress;
     }
 
+    /**
+     * Count files and direcotries.
+     * If command is copy or delete than file-action equals count files and directories.
+     * If command is cut than file-action equals double of count files and directories.
+     * If get directory in buffer list count recursively it content.
+     *
+     * @param buffer - list of files and directories for counting
+     * @return count of file-action needs
+     */
     public Integer getBufferSize(List<File> buffer) {
         Integer commandModifier = 1;
         if (filesBufferCommand.equals("cut")) {
