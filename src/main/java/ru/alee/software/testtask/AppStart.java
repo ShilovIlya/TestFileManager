@@ -1,16 +1,9 @@
-package ru.alee.software.test;
+package ru.alee.software.testtask;
 
 import org.apache.log4j.Logger;
-import ru.alee.software.test.exceptions.DirectoryNotExistException;
-import ru.alee.software.test.model.FileManager;
-import ru.alee.software.test.view.JFileManager;
-
-import javax.swing.*;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import ru.alee.software.testtask.exceptions.DirectoryNotExistException;
+import ru.alee.software.testtask.model.FileManager;
+import ru.alee.software.testtask.view.JFileManager;
 
 /**
  * Class for starting work. It creates file manager and form.

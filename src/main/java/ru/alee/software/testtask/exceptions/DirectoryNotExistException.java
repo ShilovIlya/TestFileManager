@@ -1,4 +1,4 @@
-package ru.alee.software.test.exceptions;
+package ru.alee.software.testtask.exceptions;
 
 public class DirectoryNotExistException extends Exception {
 

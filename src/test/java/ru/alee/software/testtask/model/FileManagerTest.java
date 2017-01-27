@@ -1,10 +1,10 @@
-package ru.alee.software.test.model;
+package ru.alee.software.testtask.model;
 
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import ru.alee.software.test.exceptions.DirectoryNotExistException;
+import ru.alee.software.testtask.exceptions.DirectoryNotExistException;
 
 import java.io.File;
 import java.io.IOException;
@@ -100,7 +100,7 @@ public class FileManagerTest {
             File fileZ = new File("D:/test_folderQWERTY/Z.txt");
             fileZ.createNewFile();
         } catch (IOException e) {
-            logger.debug("fail creating test files");
+            logger.debug("fail creating testtask files");
         }
         sortFileManager = new FileManager(dir);
     }

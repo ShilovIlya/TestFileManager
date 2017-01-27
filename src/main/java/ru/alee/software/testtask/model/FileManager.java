@@ -1,9 +1,8 @@
-package ru.alee.software.test.model;
+package ru.alee.software.testtask.model;
 
 import org.apache.log4j.Logger;
-import ru.alee.software.test.exceptions.DirectoryNotExistException;
+import ru.alee.software.testtask.exceptions.DirectoryNotExistException;
 
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +24,8 @@ public class FileManager {
     private List<File> filesBuffer;
     private String filesBufferCommand;
     private volatile int progress;
+    private boolean isPastInterrupted;
+    private boolean isDeleteInterrupted;
 
     /**
      * Class constructor setting curentDirectory to current path
@@ -81,6 +82,23 @@ public class FileManager {
     public List<File> getFilesFoldersList() {
         return filesFoldersList;
     }
+
+    public boolean isPastInterrupted() {
+        return isPastInterrupted;
+    }
+
+    public void setPastInterrupted(boolean pastInterrupted) {
+        isPastInterrupted = pastInterrupted;
+    }
+
+    public boolean isDeleteInterrupted() {
+        return isDeleteInterrupted;
+    }
+
+    public void setDeleteInterrupted(boolean deleteInterrupted) {
+        isDeleteInterrupted = deleteInterrupted;
+    }
+
 
     /**
      * Update list of files and folders with information form current directory
@@ -175,13 +193,15 @@ public class FileManager {
      * @throws IOException
      */
     public void copyFromBuffer() throws IOException, InterruptedException {
+        isPastInterrupted = false;
         progress = 0;
         for (File file: filesBuffer) {
-            while (!Thread.currentThread().isInterrupted()) {
-                copyFile(file, new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName())));
-                if (filesBufferCommand.equals("cut")) {
-                    deleteFile(file);
-                }
+            if (isPastInterrupted) {
+                break;
+            }
+            copyFile(file, new File(currentDirectory.getAbsolutePath().concat("\\").concat(file.getName())));
+            if (filesBufferCommand.equals("cut")) {
+                deleteFile(file);
             }
         }
     }
@@ -237,12 +257,14 @@ public class FileManager {
     */
     public void deleteFiles() throws InterruptedException {
         progress = 0;
+        isDeleteInterrupted = false;
         if (filesBufferCommand.equals("delete")) {
             for (File file : filesBuffer) {
-                while (!Thread.currentThread().isInterrupted()) {
-                    deleteFile(file);
-                    Thread.currentThread().sleep(100);
+                if (isDeleteInterrupted) {
+                    break;
                 }
+                deleteFile(file);
+                Thread.currentThread().sleep(100);
             }
         }
     }
@@ -252,6 +274,7 @@ public class FileManager {
             logger.error("Can't delete file.");
         }
         progress++;
+        logger.debug("progress in delete function = " + progress);
     }
 
     public List<File> getFilesBuffer() {

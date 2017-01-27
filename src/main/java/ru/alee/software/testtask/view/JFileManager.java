@@ -1,8 +1,8 @@
-package ru.alee.software.test.view;
+package ru.alee.software.testtask.view;
 
 import org.apache.log4j.Logger;
-import ru.alee.software.test.exceptions.DirectoryNotExistException;
-import ru.alee.software.test.model.FileManager;
+import ru.alee.software.testtask.exceptions.DirectoryNotExistException;
+import ru.alee.software.testtask.model.FileManager;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -181,15 +181,16 @@ public class JFileManager{
                                         }
                                     }
                                 });
-                                myDialog.setProgressThread(copyThread);
+                                myDialog.setProgressThread(copyThread, "paste");
                                 copyThread.start();
 
                                 int progress = fileManager.getProgress();
-                                while ((progress <= taskSize-1) && (!Thread.currentThread().isInterrupted())) {
+                                while ((progress <= taskSize-1) && (!fileManager.isPastInterrupted())) {
                                     progress = fileManager.getProgress();
                                     myDialog.dialogProgressBar.setValue(progress);
                                 }
                                 myDialog.progressStatus.setText("End");
+                                copyThread.interrupt();
                                 myDialog.dispose();
                             } catch (Exception ex) {
                                 logger.error("paste operation interrupted: " + ex);
@@ -232,15 +233,17 @@ public class JFileManager{
                                             }
                                         }
                                     });
-                                    myDialog.setProgressThread(deleteThread);
+                                    myDialog.setProgressThread(deleteThread, "delete");
                                     deleteThread.start();
 
                                     int progress = fileManager.getProgress();
-                                    while ((progress <= taskSize - 1) && (!Thread.currentThread().isInterrupted())) {
+                                    while ((progress <= taskSize - 1) && (!fileManager.isDeleteInterrupted())) {
                                         progress = fileManager.getProgress();
                                         myDialog.dialogProgressBar.setValue(progress);
                                     }
+
                                     myDialog.progressStatus.setText("End");
+
                                     myDialog.dispose();
                                 } catch (Exception ex) {
                                     logger.error("paste operation interrupted: " + ex);
@@ -297,30 +300,33 @@ public class JFileManager{
         JProgressBar dialogProgressBar;
         JLabel progressStatus;
         Thread progressThread;
+        String command;
 
-        public void setProgressThread(Thread progressThread) {
+        public void setProgressThread(Thread progressThread, String command) {
             this.progressThread = progressThread;
+            this.command = command;
         }
 
         public MyDialog(Frame owner, Integer progressSize) {
             super(owner,"Progress Dialog");
             try {
-                setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+                setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
                 Dimension dialogSize = new Dimension(100, 100);
                 setSize(dialogSize);
 
                 JPanel panel = (JPanel)getContentPane();
                 panel.setLayout(new FlowLayout(FlowLayout.CENTER));
-                cancelButton = new JButton("Cancel");
-                cancelButton.addActionListener(this);
-                panel.add(cancelButton);
 
                 dialogProgressBar = new JProgressBar(0, progressSize);
                 panel.add(dialogProgressBar);
 
                 progressStatus = new JLabel("Progress...");
                 panel.add(BorderLayout.NORTH, progressStatus);
+
+                cancelButton = new JButton("Cancel");
+                cancelButton.addActionListener(this);
+                panel.add(cancelButton);
 
                 pack();
             } catch (Exception exception) {
@@ -329,8 +335,12 @@ public class JFileManager{
         }
 
         public synchronized void actionPerformed(ActionEvent actionEvent) {
-            progressThread.interrupt();
-            Thread.currentThread().interrupt();
+            if (command.equals("paste")) {
+                fileManager.setPastInterrupted(true);
+            }
+            if (command.equals("delete")) {
+                fileManager.setDeleteInterrupted(true);
+            }
             dispose();
         }
     }
